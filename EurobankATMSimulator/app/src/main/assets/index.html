@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Προσομοιωτής ATM Eurobank - Εκπαιδευτικό Εργαλείο</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Comfortaa & Inter for high readability and friendly shapes -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Comfortaa', 'Inter', sans-serif;
+            background-color: #f0f4f8;
+        }
+        .atm-font {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom Eurobank Red: #D9232F */
+        .bg-eurobank {
+            background-color: #D9232F;
+        }
+        .text-eurobank {
+            color: #D9232F;
+        }
+        .border-eurobank {
+            border-color: #D9232F;
+        }
+        /* Custom pulse for highlights */
+        @keyframes helper-pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(217, 35, 47, 0.7); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(217, 35, 47, 0); }
+        }
+        .guide-highlight {
+            animation: helper-pulse 2s infinite;
+            border: 4px solid #3B82F6;
+        }
+        .guide-btn-highlight {
+            animation: helper-pulse 1.5s infinite;
+            border: 4px solid #10B981 !important;
+            background-color: #D1FAE5 !important;
+            color: #065F46 !important;
+        }
+        /* Slot blinking animation */
+        @keyframes slot-blink {
+            0%, 100% { background-color: #4B5563; box-shadow: 0 0 0px #3B82F6; }
+            50% { background-color: #3B82F6; box-shadow: 0 0 15px #3B82F6; }
+        }
+        .slot-active {
+            animation: slot-blink 1s infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden text-gray-800">
+
+    <!-- TOP HEADER / CONTROLS -->
+    <header class="bg-white border-b-2 border-gray-200 px-4 py-3 shadow-sm z-10">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <div class="bg-eurobank text-white px-3 py-1 rounded font-bold text-xl tracking-wider flex items-center gap-1">
+                    <span class="text-yellow-400">★</span> Eurobank
+                </div>
+                <h1 class="text-sm md:text-base font-bold text-gray-700">Προσομοιωτής ATM για Εκμάθηση</h1>
+            </div>
+            
+            <!-- Training Controls -->
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- Mode Selector -->
+                <div class="bg-gray-100 p-1 rounded-lg flex border border-gray-300">
+                    <button id="btnModeGuided" onclick="setMode('guided')" class="px-3 py-1.5 rounded-md text-xs md:text-sm font-bold transition-all bg-white shadow-sm text-blue-600">
+                        <i class="fa-solid fa-graduation-cap mr-1"></i> Καθοδήγηση
+                    </button>
+                    <button id="btnModePractice" onclick="setMode('practice')" class="px-3 py-1.5 rounded-md text-xs md:text-sm font-bold transition-all text-gray-600">
+                        <i class="fa-solid fa-user-gear mr-1"></i> Ελεύθερη Εξάσκηση
+                    </button>
+                </div>
+
+                <!-- Voice Toggle -->
+                <button id="btnVoiceToggle" onclick="toggleVoice()" class="bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1.5 rounded-lg text-xs md:text-sm font-bold flex items-center gap-1 transition">
+                    <i id="voiceIcon" class="fa-solid fa-volume-high"></i>
+                    <span id="voiceText">Ήχος: ΝΑΙ</span>
+                </button>
+
+                <!-- Reset Button -->
+                <button onclick="resetSimulation()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-xs md:text-sm font-bold flex items-center gap-1 transition">
+                    <i class="fa-solid fa-rotate-left"></i> Επανεκκίνηση
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN APP WRAPPER -->
+    <main class="flex-grow max-w-6xl w-full mx-auto p-4 flex flex-col lg:flex-row gap-6 items-stretch justify-center">
+        
+        <!-- LEFT COLUMN: HELPER / INSTRUCTIONS (Crucial for Autism support) -->
+        <div class="w-full lg:w-1/3 flex flex-col gap-4">
+            <!-- Assistant Character Widget -->
+            <div class="bg-white rounded-2xl shadow-md border-2 border-blue-200 p-4 flex flex-col items-center text-center relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-2 bg-blue-400"></div>
+                
+                <!-- Character Avatar Representation -->
+                <div class="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mb-3 border-4 border-white shadow-md relative">
+                    <span class="text-5xl">🧑‍🏫</span>
+                    <div class="absolute bottom-0 right-0 bg-green-500 w-5 h-5 rounded-full border-2 border-white flex items-center justify-center">
+                        <span class="block w-2.5 h-2.5 rounded-full bg-white animate-ping"></span>
+                    </div>
+                </div>
+
+                <h2 class="text-lg font-bold text-gray-800 mb-1">Ο βοηθός σου: Άρης</h2>
+                <span class="text-xs font-semibold bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full mb-3">Εδώ για να σε βοηθήσω!</span>
+                
+                <!-- Dialog Bubble -->
+                <div class="bg-blue-50 text-blue-900 border border-blue-100 rounded-xl p-4 w-full relative">
+                    <div class="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-blue-50 border-t border-l border-blue-100 rotate-45"></div>
+                    <p id="helperInstructions" class="text-base font-bold leading-relaxed">
+                        Γεια σου! Ας μάθουμε μαζί πώς να χρησιμοποιούμε το ATM της Eurobank. <br>Για να ξεκινήσεις, <strong>βάλε την κάρτα σου</strong> στην πράσινη σχισμή!
+                    </p>
+                </div>
+
+                <!-- Repeat Sound Button -->
+                <button onclick="speakCurrentInstruction()" class="mt-3 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl text-sm flex items-center gap-2 transition w-full justify-center shadow">
+                    <i class="fa-solid fa-comment-dots"></i> Άκουσε ξανά την οδηγία
+                </button>
+            </div>
+
+            <!-- Learning Card / Goals -->
+            <div class="bg-white rounded-2xl shadow-md p-4 border border-gray-200">
+                <h3 class="font-bold text-gray-800 mb-2 flex items-center gap-2">
+                    <span class="text-yellow-500">🎯</span> Τα βήματά σου:
+                </h3>
+                <ul class="space-y-2.5 text-sm font-semibold text-gray-600">
+                    <li id="step1" class="flex items-center gap-2 text-blue-600">
+                        <i class="fa-solid fa-circle-dot"></i> 1. Εισαγωγή Κάρτας
+                    </li>
+                    <li id="step2" class="flex items-center gap-2 text-gray-300">
+                        <i class="fa-regular fa-circle"></i> 2. Πληκτρολόγηση PIN
+                    </li>
+                    <li id="step3" class="flex items-center gap-2 text-gray-300">
+                        <i class="fa-regular fa-circle"></i> 3. Επιλογή Συναλλαγής
+                    </li>
+                    <li id="step4" class="flex items-center gap-2 text-gray-300">
+                        <i class="fa-regular fa-circle"></i> 4. Επιλογή Ποσού
+                    </li>
+                    <li id="step5" class="flex items-center gap-2 text-gray-300">
+                        <i class="fa-regular fa-circle"></i> 5. Παραλαβή Κάρτας & Χρημάτων
+                    </li>
+                </ul>
+
+                <!-- Visual PIN Cheat Sheet (optional support helper) -->
+                <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-lg">💡</span>
+                        <h4 class="font-bold text-xs text-yellow-800">Χρήσιμη Βοήθεια:</h4>
+                    </div>
+                    <p class="text-xs text-yellow-900 leading-normal">
+                        Το μυστικό σου PIN για αυτό το παιχνίδι είναι: <strong class="text-sm bg-yellow-200 px-1.5 py-0.5 rounded">1 2 3 4</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: THE PHYSICAL ATM SIMULATOR -->
+        <div class="w-full lg:w-2/3 flex flex-col items-center">
+            
+            <!-- ATM MAIN FRAME -->
+            <div class="w-full max-w-lg bg-gray-300 rounded-3xl p-4 md:p-6 shadow-2xl border-4 border-gray-400 flex flex-col gap-6 relative">
+                
+                <!-- Brand logo on physical ATM casing -->
+                <div class="flex justify-between items-center px-2">
+                    <div class="flex items-center gap-2 text-white bg-eurobank px-3 py-1.5 rounded-md font-bold text-sm tracking-wider shadow">
+                        <span class="text-yellow-400">★</span> Eurobank
+                    </div>
+                    <div class="text-gray-600 text-xs font-black tracking-widest uppercase">ATM MULTISYSTEM</div>
+                </div>
+
+                <!-- 1. ATM SCREEN FRAME -->
+                <div class="bg-black p-3 md:p-4 rounded-2xl shadow-inner border-4 border-gray-600 relative">
+                    
+                    <!-- ACTUAL SCREEN WORKSPACE -->
+                    <div id="atmScreen" class="bg-sky-900 text-white aspect-[4/3] rounded-lg overflow-hidden flex flex-col justify-between p-4 relative atm-font">
+                        
+                        <!-- SCREEN STATES -->
+
+                        <!-- STATE A: WELCOME / INSERT CARD -->
+                        <div id="stateWelcome" class="h-full flex flex-col justify-between items-center text-center">
+                            <div class="w-full flex justify-between items-center text-xs border-b border-sky-800 pb-2">
+                                <span class="font-bold text-yellow-300">Καλώς ορίσατε / Welcome</span>
+                                <span class="opacity-70">Eurobank ATM</span>
+                            </div>
+                            
+                            <div class="my-auto flex flex-col items-center gap-3">
+                                <div class="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center animate-bounce">
+                                    <i class="fa-solid fa-credit-card text-4xl text-yellow-400"></i>
+                                </div>
+                                <h3 class="text-xl font-bold tracking-wide">ΠΑΡΑΚΑΛΩ ΕΙΣΑΓΕΤΕ ΤΗΝ ΚΑΡΤΑ ΣΑΣ</h3>
+                                <p class="text-sm opacity-90 text-sky-200 max-w-xs">Τοποθετήστε την κάρτα σας στη σχισμή κάτω δεξιά για να ξεκινήσετε.</p>
+                            </div>
+
+                            <div class="w-full text-xs opacity-75 border-t border-sky-800 pt-2 flex justify-between">
+                                <span>GR / EN / DE</span>
+                                <span>Ασφαλείς Συναλλαγές</span>
+                            </div>
+                        </div>
+
+                        <!-- STATE B: ENTER PIN -->
+                        <div id="statePinEntry" class="h-full hidden flex flex-col justify-between">
+                            <div class="text-center">
+                                <h3 class="text-base md:text-lg font-bold text-yellow-300 uppercase tracking-wide">ΕΙΣΑΓΩΓΗ ΠΡΟΣΩΠΙΚΟΥ PIN</h3>
+                                <p class="text-xs text-sky-200">Πληκτρολογήστε το 4ψήφιο PIN σας στο πληκτρολόγιο από κάτω.</p>
+                            </div>
+
+                            <!-- PIN dots display -->
+                            <div class="flex flex-col items-center justify-center my-auto gap-4">
+                                <div class="flex gap-4">
+                                    <!-- Dot 1 -->
+                                    <div id="pinDot1" class="w-10 h-10 rounded-xl border-2 border-sky-400 flex items-center justify-center text-2xl font-bold bg-sky-950">-</div>
+                                    <!-- Dot 2 -->
+                                    <div id="pinDot2" class="w-10 h-10 rounded-xl border-2 border-sky-400 flex items-center justify-center text-2xl font-bold bg-sky-950">-</div>
+                                    <!-- Dot 3 -->
+                                    <div id="pinDot3" class="w-10 h-10 rounded-xl border-2 border-sky-400 flex items-center justify-center text-2xl font-bold bg-sky-950">-</div>
+                                    <!-- Dot 4 -->
+                                    <div id="pinDot4" class="w-10 h-10 rounded-xl border-2 border-sky-400 flex items-center justify-center text-2xl font-bold bg-sky-950">-</div>
+                                </div>
+                                
+                                <span id="pinFeedback" class="text-xs text-red-300 font-bold tracking-wide h-4"></span>
+                            </div>
+
+                            <div class="flex justify-between items-center text-xs border-t border-sky-800 pt-2">
+                                <span class="text-red-300">ΑΚΥΡΟ (Κόκκινο) = Έξοδος</span>
+                                <span class="text-green-300">ΑΠΟΔΟΧΗ (Πράσινο) = Συνέχεια</span>
+                            </div>
+                        </div>
+
+                        <!-- STATE C: MAIN MENU -->
+                        <div id="stateMainMenu" class="h-full hidden flex flex-col justify-between">
+                            <div class="text-center border-b border-sky-800 pb-2">
+                                <h3 class="text-base font-bold text-yellow-300">ΠΑΡΑΚΑΛΩ ΕΠΙΛΕΞΤΕ ΣΥΝΑΛΛΑΓΗ</h3>
+                                <p class="text-xs text-sky-200">Πατήστε το κουμπί της επιθυμητής ενέργειας στην οθόνη</p>
+                            </div>
+
+                            <!-- Grid of Main Actions mimicking tactile layout -->
+                            <div class="grid grid-cols-2 gap-3 my-auto">
+                                <button id="btnWithdrawal" onclick="selectAction('withdrawal')" class="bg-sky-800 hover:bg-sky-700 active:bg-sky-950 border border-sky-600 rounded-xl py-3 px-4 text-left font-bold text-sm flex items-center justify-between transition group">
+                                    <span>💸 ΑΝΑΛΗΨΗ ΧΡΗΜΑΤΩΝ</span>
+                                    <i class="fa-solid fa-chevron-right text-yellow-400 group-hover:translate-x-1 transition-transform"></i>
+                                </button>
+                                
+                                <button id="btnBalance" onclick="selectAction('balance')" class="bg-sky-800 hover:bg-sky-700 active:bg-sky-950 border border-sky-600 rounded-xl py-3 px-4 text-left font-bold text-sm flex items-center justify-between transition group">
+                                    <span>🏦 ΕΡΩΤΗΣΗ ΥΠΟΛΟΙΠΟΥ</span>
+                                    <i class="fa-solid fa-chevron-right text-yellow-400 group-hover:translate-x-1 transition-transform"></i>
+                                </button>
+
+                                <div class="bg-sky-950/40 border border-sky-800 opacity-50 rounded-xl py-3 px-4 text-left text-xs flex items-center justify-between">
+                                    <span>📥 ΚΑΤΑΘΕΣΗ (Κλειστό)</span>
+                                </div>
+
+                                <button id="btnCancelMenu" onclick="cancelTransaction()" class="bg-red-900/80 hover:bg-red-800 border border-red-700 rounded-xl py-3 px-4 text-left font-bold text-sm flex items-center justify-between transition">
+                                    <span>❌ ΑΚΥΡΩΣΗ & ΕΞΟΔΟΣ</span>
+                                </button>
+                            </div>
+
+                            <div class="text-center text-[10px] opacity-60">
+                                Eurobank Card • Ασφαλές Σύστημα
+                            </div>
+                        </div>
+
+                        <!-- STATE D: WITHDRAWAL AMOUNTS -->
+                        <div id="stateWithdrawalAmounts" class="h-full hidden flex flex-col justify-between">
+                            <div class="text-center border-b border-sky-800 pb-2">
+                                <h3 class="text-base font-bold text-yellow-300">ΕΠΙΛΟΓΗ ΠΟΣΟΥ ΑΝΑΛΗΨΗΣ</h3>
+                                <p class="text-xs text-sky-200">Πόσα χρήματα θέλετε να πάρετε;</p>
+                            </div>
+
+                            <!-- Amounts options -->
+                            <div class="grid grid-cols-2 gap-2 my-auto">
+                                <button id="btnAmount20" onclick="selectAmount(20)" class="bg-sky-800 hover:bg-sky-700 active:bg-sky-950 border border-sky-600 rounded-xl py-2.5 px-3 text-left font-bold text-sm flex items-center justify-between transition group">
+                                    <span>💵 20 ΕΥΡΩ</span>
+                                    <span class="text-yellow-400 font-extrabold text-base">€20</span>
+                                </button>
+
+                                <button id="btnAmount40" onclick="selectAmount(40)" class="bg-sky-800 hover:bg-sky-700 active:bg-sky-950 border border-sky-600 rounded-xl py-2.5 px-3 text-left font-bold text-sm flex items-center justify-between transition group">
+                                    <span>💵 40 ΕΥΡΩ</span>
+                                    <span class="text-yellow-400 font-extrabold text-base">€40</span>
+                                </button>
+
+                                <button id="btnAmount50" onclick="selectAmount(50)" class="bg-sky-800 hover:bg-sky-700 active:bg-sky-950 border border-sky-600 rounded-xl py-2.5 px-3 text-left font-bold text-sm flex items-center justify-between transition group">
+                                    <span>💵 50 ΕΥΡΩ</span>
+                                    <span class="text-yellow-400 font-extrabold text-base">€50</span>
+                                </button>
+
+                                <button id="btnAmount80" onclick="selectAmount(80)" class="bg-sky-800 hover:bg-sky-700 active:bg-sky-950 border border-sky-600 rounded-xl py-2.5 px-3 text-left font-bold text-sm flex items-center justify-between transition group">
+                                    <span>💵 80 ΕΥΡΩ</span>
+                                    <span class="text-yellow-400 font-extrabold text-base">€80</span>
+                                </button>
+
+                                <button id="btnAmount100" onclick="selectAmount(100)" class="bg-sky-800 hover:bg-sky-700 active:bg-sky-950 border border-sky-600 rounded-xl py-2.5 px-3 text-left font-bold text-sm flex items-center justify-between transition group">
+                                    <span>💵 100 ΕΥΡΩ</span>
+                                    <span class="text-yellow-400 font-extrabold text-base">€100</span>
+                                </button>
+
+                                <button id="btnAmount120" onclick="selectAmount(120)" class="bg-sky-800 hover:bg-sky-700 active:bg-sky-950 border border-sky-600 rounded-xl py-2.5 px-3 text-left font-bold text-sm flex items-center justify-between transition group">
+                                    <span>💵 120 ΕΥΡΩ</span>
+                                    <span class="text-yellow-400 font-extrabold text-base">€120</span>
+                                </button>
+
+                                <button id="btnAmountBack" onclick="goBackToMainMenu()" class="col-span-2 bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded-xl py-2.5 px-3 text-left font-bold text-sm flex items-center justify-between transition">
+                                    <span>⬅️ ΠΙΣΩ ΣΤΟ ΜΕΝΟΥ</span>
+                                </button>
+                            </div>
+
+                            <div class="text-center text-[10px] opacity-60">
+                                Όρια ανάληψης βάσει υπολοίπου
+                            </div>
+                        </div>
+
+                        <!-- STATE E: BALANCE DISPLAY -->
+                        <div id="stateBalanceDisplay" class="h-full hidden flex flex-col justify-between text-center">
+                            <div class="border-b border-sky-800 pb-2">
+                                <h3 class="text-base font-bold text-yellow-300">ΥΠΟΛΟΙΠΟ ΛΟΓΑΡΙΑΣΜΟΥ</h3>
+                                <p class="text-xs text-sky-200">Πληροφορίες Λογαριασμού Ταμιευτηρίου</p>
+                            </div>
+
+                            <div class="my-auto bg-sky-950/60 p-4 rounded-xl border border-sky-700 inline-block mx-auto">
+                                <p class="text-xs uppercase tracking-widest text-sky-300 mb-1">Διαθέσιμο Υπόλοιπο</p>
+                                <p class="text-3xl font-extrabold text-green-400 tracking-wider">340,50 €</p>
+                                <p class="text-[10px] text-gray-400 mt-2">Ημερομηνία: Σήμερα</p>
+                            </div>
+
+                            <div class="flex justify-center gap-4">
+                                <button id="btnReceiptBack" onclick="goBackToMainMenu()" class="bg-sky-800 hover:bg-sky-700 border border-sky-600 rounded-xl py-2 px-6 font-bold text-sm transition">
+                                    ⬅️ ΠΙΣΩ
+                                </button>
+                                <button id="btnReceiptExit" onclick="cancelTransaction()" class="bg-red-800 hover:bg-red-700 border border-red-600 rounded-xl py-2 px-6 font-bold text-sm transition">
+                                    🔴 ΤΕΛΟΣ & ΕΞΟΔΟΣ
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- STATE F: PROCESSING -->
+                        <div id="stateProcessing" class="h-full hidden flex flex-col justify-center items-center text-center gap-4">
+                            <div class="w-16 h-16 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+                            <div>
+                                <h3 id="processingText" class="text-lg font-bold">Η ΣΥΝΑΛΛΑΓΗ ΣΑΣ ΕΠΕΞΕΡΓΑΖΕΤΑΙ...</h3>
+                                <p class="text-xs text-sky-200 mt-1">Παρακαλώ περιμένετε, μην κάνετε καμία ενέργεια.</p>
+                            </div>
+                        </div>
+
+                        <!-- STATE G: SUCCESS REWARD / SUCCESSFUL WITHDRAWAL / TAKE ASSETS -->
+                        <div id="stateTakeAssets" class="h-full hidden flex flex-col justify-between items-center text-center">
+                            <div class="bg-green-600/30 border border-green-500 rounded-lg p-2 w-full text-green-300 font-bold text-xs">
+                                ✔ ΕΓΚΡΙΘΗΚΕ
+                            </div>
+
+                            <div class="my-auto flex flex-col items-center gap-2">
+                                <div class="w-14 h-14 bg-green-500 rounded-full flex items-center justify-center text-3xl animate-bounce">
+                                    🎉
+                                </div>
+                                <h3 id="takeAssetsTitle" class="text-lg font-bold text-green-300">ΠΑΡΑΛΑΒΕΤΕ ΤΑ ΧΡΗΜΑΤΑ ΣΑΣ</h3>
+                                <p id="takeAssetsSubtitle" class="text-xs text-sky-100 max-w-xs">Κάντε κλικ στα αναβοσβήνοντα αντικείμενα κάτω από την οθόνη για να τα πάρετε!</p>
+                            </div>
+
+                            <div class="text-xs text-yellow-300 font-bold animate-pulse">
+                                Μην ξεχάσετε την κάρτα σας!
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- 2. PHYSICAL ATM INPUT/OUTPUT SLOTS (SENSORY-FRIENDLY INTERACTIVE BUTTONS) -->
+                <div class="grid grid-cols-2 gap-4">
+                    
+                    <!-- LEFT COLUMN: RECEIPT & CASH OUTLETS -->
+                    <div class="flex flex-col gap-4">
+                        <!-- Cash Dispenser Outlet -->
+                        <div class="bg-gray-800 p-3 rounded-xl border border-gray-700 flex flex-col items-center gap-2">
+                            <span class="text-gray-400 text-[10px] font-bold">💶 ΕΞΟΔΟΣ ΧΡΗΜΑΤΩΝ</span>
+                            <div id="cashSlot" class="w-full h-4 bg-gray-950 rounded border border-gray-800 relative flex justify-center items-center">
+                                <!-- Money sticking out -->
+                                <div id="physicalCash" onclick="takeCash()" class="absolute -bottom-4 bg-green-100 border-2 border-green-600 text-[10px] text-green-800 font-extrabold w-32 py-1 px-2 rounded shadow-md text-center cursor-pointer transition transform hover:scale-105 hidden">
+                                    💶 ΠΑΡΕ ΤΑ ΛΕΦΤΑ
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Receipt Outlet -->
+                        <div class="bg-gray-800 p-3 rounded-xl border border-gray-700 flex flex-col items-center gap-2">
+                            <span class="text-gray-400 text-[10px] font-bold">📄 ΑΠΟΔΕΙΞΗ</span>
+                            <div id="receiptSlot" class="w-full h-3 bg-gray-950 rounded border border-gray-850 relative flex justify-center items-center">
+                                <!-- Receipt sticking out -->
+                                <div id="physicalReceipt" onclick="takeReceipt()" class="absolute -bottom-6 bg-white border-x border-b border-gray-300 text-gray-800 font-mono text-[9px] w-20 py-1.5 px-1 shadow rounded-b cursor-pointer transition transform hover:scale-105 hidden">
+                                    <div class="border-b border-dashed border-gray-400 mb-1">Receipt</div>
+                                    <div class="text-center font-bold">✔ OK</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT COLUMN: CARD INPUT -->
+                    <div class="flex flex-col gap-4 justify-between">
+                        <!-- Card Slot -->
+                        <div class="bg-gray-800 p-3 rounded-xl border border-gray-700 flex flex-col items-center gap-2">
+                            <span class="text-gray-400 text-[10px] font-bold">💳 ΕΙΣΑΓΩΓΗ ΚΑΡΤΑΣ</span>
+                            <div id="cardSlot" class="w-full h-5 bg-gray-950 rounded border-2 border-green-500 slot-active relative flex justify-center items-center">
+                                <!-- Green arrow light pointing to card entry -->
+                                <span class="text-green-400 text-xs animate-ping">▼</span>
+                                
+                                <!-- Card inserted visual representation -->
+                                <div id="cardInsertedVisual" class="absolute inset-y-0 w-2/3 bg-blue-600 rounded-t border-t border-x border-blue-400 hidden"></div>
+                            </div>
+                        </div>
+
+                        <!-- Physical Interactive Toy Card (Click to insert) -->
+                        <div id="walletArea" class="bg-gray-200 p-2 rounded-xl border-2 border-dashed border-gray-400 flex flex-col items-center">
+                            <span class="text-gray-600 text-[9px] font-bold mb-1">ΤΟ ΠΟΡΤΟΦΟΛΙ ΣΟΥ</span>
+                            <div id="toyCard" onclick="insertCard()" class="bg-gradient-to-r from-blue-700 to-indigo-800 text-white p-2.5 rounded-lg shadow-md cursor-pointer hover:from-blue-600 hover:to-indigo-700 transition w-full flex items-center justify-between border-b-4 border-indigo-950 active:translate-y-0.5">
+                                <div class="flex items-center gap-1.5">
+                                    <div class="w-5 h-4 bg-yellow-400 rounded-sm"></div>
+                                    <span class="text-[9px] font-black tracking-wide">Eurobank</span>
+                                </div>
+                                <i class="fa-solid fa-credit-card text-base"></i>
+                            </div>
+                            <span id="cardPrompt" class="text-[9px] text-blue-600 font-bold mt-1 animate-pulse">Κάνε κλικ στην κάρτα!</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- 3. PHYSICAL KEYPAD -->
+                <div class="bg-gray-400 p-3 rounded-2xl border border-gray-300 shadow-md">
+                    <div class="grid grid-cols-4 gap-2">
+                        <!-- Left Keypad Matrix -->
+                        <div class="col-span-3 grid grid-cols-3 gap-2">
+                            <!-- 1 -->
+                            <button onclick="pressKey('1')" class="bg-gradient-to-b from-gray-100 to-gray-300 hover:from-white hover:to-gray-200 border-2 border-gray-400 active:border-gray-500 rounded-xl py-3 text-center text-lg font-bold text-gray-700 shadow-sm active:translate-y-0.5 transition-all">1</button>
+                            <!-- 2 -->
+                            <button onclick="pressKey('2')" class="bg-gradient-to-b from-gray-100 to-gray-300 hover:from-white hover:to-gray-200 border-2 border-gray-400 active:border-gray-500 rounded-xl py-3 text-center text-lg font-bold text-gray-700 shadow-sm active:translate-y-0.5 transition-all">2</button>
+                            <!-- 3 -->
+                            <button onclick="pressKey('3')" class="bg-gradient-to-b from-gray-100 to-gray-300 hover:from-white hover:to-gray-200 border-2 border-gray-400 active:border-gray-500 rounded-xl py-3 text-center text-lg font-bold text-gray-700 shadow-sm active:translate-y-0.5 transition-all">3</button>
+                            <!-- 4 -->
+                            <button onclick="pressKey('4')" class="bg-gradient-to-b from-gray-100 to-gray-300 hover:from-white hover:to-gray-200 border-2 border-gray-400 active:border-gray-500 rounded-xl py-3 text-center text-lg font-bold text-gray-700 shadow-sm active:translate-y-0.5 transition-all">4</button>
+                            <!-- 5 -->
+                            <button onclick="pressKey('5')" class="bg-gradient-to-b from-gray-100 to-gray-300 hover:from-white hover:to-gray-200 border-2 border-gray-400 active:border-gray-500 rounded-xl py-3 text-center text-lg font-bold text-gray-700 shadow-sm active:translate-y-0.5 transition-all">5</button>
+                            <!-- 6 -->
+                            <button onclick="pressKey('6')" class="bg-gradient-to-b from-gray-100 to-gray-300 hover:from-white hover:to-gray-200 border-2 border-gray-400 active:border-gray-500 rounded-xl py-3 text-center text-lg font-bold text-gray-700 shadow-sm active:translate-y-0.5 transition-all">6</button>
+                            <!-- 7 -->
+                            <button onclick="pressKey('7')" class="bg-gradient-to-b from-gray-100 to-gray-300 hover:from-white hover:to-gray-200 border-2 border-gray-400 active:border-gray-500 rounded-xl py-3 text-center text-lg font-bold text-gray-700 shadow-sm active:translate-y-0.5 transition-all">7</button>
+                            <!-- 8 -->
+                            <button onclick="pressKey('8')" class="bg-gradient-to-b from-gray-100 to-gray-300 hover:from-white hover:to-gray-200 border-2 border-gray-400 active:border-gray-500 rounded-xl py-3 text-center text-lg font-bold text-gray-700 shadow-sm active:translate-y-0.5 transition-all">8</button>
+                            <!-- 9 -->
+                            <button onclick="pressKey('9')" class="bg-gradient-to-b from-gray-100 to-gray-300 hover:from-white hover:to-gray-200 border-2 border-gray-400 active:border-gray-500 rounded-xl py-3 text-center text-lg font-bold text-gray-700 shadow-sm active:translate-y-0.5 transition-all">9</button>
+                            <!-- * -->
+                            <button class="bg-gray-300 border-2 border-gray-400 rounded-xl py-3 text-center text-base font-bold text-gray-400 cursor-not-allowed shadow-sm" disabled>*</button>
+                            <!-- 0 -->
+                            <button onclick="pressKey('0')" class="bg-gradient-to-b from-gray-100 to-gray-300 hover:from-white hover:to-gray-200 border-2 border-gray-400 active:border-gray-500 rounded-xl py-3 text-center text-lg font-bold text-gray-700 shadow-sm active:translate-y-0.5 transition-all">0</button>
+                            <!-- # -->
+                            <button class="bg-gray-300 border-2 border-gray-400 rounded-xl py-3 text-center text-base font-bold text-gray-400 cursor-not-allowed shadow-sm" disabled>#</button>
+                        </div>
+
+                        <!-- Right Control Columns -->
+                        <div class="col-span-1 flex flex-col gap-2">
+                            <!-- Cancel (Red) -->
+                            <button onclick="cancelTransaction()" class="bg-gradient-to-b from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 text-white font-extrabold text-[10px] md:text-xs rounded-xl py-3 text-center shadow border-b-4 border-red-800 active:translate-y-0.5 transition-all uppercase">
+                                ΑΚΥΡΟ<br><span class="text-[9px] font-normal opacity-90">CANCEL</span>
+                            </button>
+                            <!-- Clear (Yellow) -->
+                            <button onclick="clearPin()" class="bg-gradient-to-b from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-gray-900 font-extrabold text-[10px] md:text-xs rounded-xl py-3 text-center shadow border-b-4 border-yellow-800 active:translate-y-0.5 transition-all uppercase">
+                                ΔΙΟΡΘΩΣΗ<br><span class="text-[9px] font-normal opacity-90">CLEAR</span>
+                            </button>
+                            <!-- Enter (Green) -->
+                            <button onclick="submitPin()" class="bg-gradient-to-b from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 text-white font-extrabold text-[10px] md:text-xs rounded-xl py-3 text-center shadow border-b-4 border-green-800 active:translate-y-0.5 transition-all uppercase">
+                                ΑΠΟΔΟΧΗ<br><span class="text-[9px] font-normal opacity-90">ENTER</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- SUCCESS CELEBRATION MODAL OVERLAY -->
+    <div id="modalSuccess" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full text-center border-4 border-green-400 shadow-2xl relative transform scale-95 transition-transform duration-300">
+            <!-- Confetti/Star decoration -->
+            <div class="text-6xl mb-4">🏆</div>
+            <h3 class="text-2xl font-black text-green-600 mb-2">Συγχαρητήρια!</h3>
+            <p class="text-gray-700 font-bold mb-4 text-base">Τα κατάφερες υπέροχα! Έμαθες πώς να χρησιμοποιείς το ATM της Eurobank.</p>
+            
+            <div class="bg-green-50 p-4 rounded-2xl border border-green-100 mb-6">
+                <p class="text-sm text-green-800 font-bold flex items-center justify-center gap-2">
+                    <span>🌟</span> Κέρδισες το βραβείο του "Έμπειρου Χρήστη ATM"!
+                </p>
+            </div>
+
+            <button onclick="restartAfterSuccess()" class="bg-green-500 hover:bg-green-600 text-white font-black py-4 px-8 rounded-2xl text-lg shadow-lg hover:shadow-xl transition transform active:scale-95 w-full">
+                Παίξε Ξανά! 🔁
+            </button>
+        </div>
+    </div>
+
+    <!-- FOOTER INFO / ACKNOWLEDGEMENTS -->
+    <footer class="bg-gray-100 border-t border-gray-200 py-3 text-center text-xs text-gray-500">
+        <p>Ειδικό Εκπαιδευτικό Εργαλείο • Σχεδιάστηκε με αγάπη για την προσβασιμότητα και την αυτόνομη διαβίωση ατόμων με αναπηρία.</p>
+    </footer>
+
+    <!-- LOGIC AND STATE MANAGEMENT -->
+    <script>
+        // App State Variables
+        let currentStep = 'welcome'; // welcome, pin-entry, main-menu, withdrawal-amounts, balance, processing, take-assets
+        let isCardInserted = false;
+        let enteredPin = "";
+        const correctPin = "1234";
+        let isGuidedMode = true;
+        let isVoiceEnabled = true;
+        let selectedActionType = ""; // withdrawal, balance
+        let userHasCash = false;
+        let userHasReceipt = false;
+
+        // Visual State definitions
+        const states = {
+            'welcome': 'stateWelcome',
+            'pin-entry': 'statePinEntry',
+            'main-menu': 'stateMainMenu',
+            'withdrawal-amounts': 'stateWithdrawalAmounts',
+            'balance': 'stateBalanceDisplay',
+            'processing': 'stateProcessing',
+            'take-assets': 'stateTakeAssets'
+        };
+
+        // Text & Audio instructions matched to each step
+        const stepInstructions = {
+            'welcome': "Γεια σου! Ας μάθουμε μαζί πώς να χρησιμοποιούμε το ATM της Eurobank. Για να ξεκινήσεις, κάνε κλικ στην κάρτα σου για να τη βάλεις στην πράσινη σχισμή!",
+            'pin-entry': "Μπράβο! Τώρα, χρησιμοποίησε το πληκτρολόγιο για να πατήσεις το PIN σου. Το μυστικό σου PIN είναι: 1, 2, 3, 4. Μετά, πάτα το πράσινο κουμπί ΑΠΟΔΟΧΗ.",
+            'pin-error': "Ωχ, το PIN δεν είναι σωστό. Ας προσπαθήσουμε ξανά! Πάτα το κίτρινο κουμπί ΔΙΟΡΘΩΣΗ και γράψε ξανά: 1, 2, 3, 4.",
+            'main-menu': "Τέλεια! Τώρα διάλεξε τι θέλεις να κάνεις. Αν θέλεις να πάρεις χρήματα, πάτα την επιλογή ΑΝΑΛΗΨΗ ΧΡΗΜΑΤΩΝ στην οθόνη.",
+            'withdrawal-amounts': "Εδώ διαλέγεις πόσα χρήματα θέλεις. Ας πάρουμε 50 Ευρώ. Πάτα το κουμπί που γράφει 50 ΕΥΡΩ.",
+            'processing': "Το ATM επεξεργάζεται τη συναλλαγή σου. Περίμενε μερικά δευτερόλεπτα, σχεδόν τελειώσαμε!",
+            'take-assets-withdrawal': "Υπέροχα! Πάρε τα χρήματά σου από τη σχισμή κάτω αριστερά και μετά πάρε την κάρτα σου. Κάνε κλικ πάνω τους για να τα μαζέψεις!",
+            'take-assets-balance': "Πολύ ωραία! Μπορείς να πάρεις την κάρτα σου και την απόδειξη με το υπόλοιπό σου. Κάνε κλικ πάνω τους για να τα μαζέψεις!",
+            'cancel-press': "Ακυρώθηκε η συναλλαγή. Μην ξεχάσεις να πάρεις πίσω την κάρτα σου κάνοντας κλικ πάνω της."
+        };
+
+        // Speech synthesis helper
+        function speak(text) {
+            if (!isVoiceEnabled) return;
+            // Stop any ongoing speech first
+            window.speechSynthesis.cancel();
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'el-GR';
+            utterance.rate = 0.9; // Slightly slower for better cognitive processing
+            utterance.pitch = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // Initialize App
+        window.onload = function() {
+            updateView();
+            // Greet the user after a short delay
+            setTimeout(() => {
+                speakCurrentInstruction();
+            }, 800);
+        };
+
+        // Set Simulation Mode (Guided or Practice)
+        function setMode(mode) {
+            isGuidedMode = (mode === 'guided');
+            
+            // UI Updates
+            const btnGuided = document.getElementById('btnModeGuided');
+            const btnPractice = document.getElementById('btnModePractice');
+            
+            if (isGuidedMode) {
+                btnGuided.classList.add('bg-white', 'shadow-sm', 'text-blue-600');
+                btnGuided.classList.remove('text-gray-600');
+                btnPractice.classList.add('text-gray-600');
+                btnPractice.classList.remove('bg-white', 'shadow-sm', 'text-blue-600');
+            } else {
+                btnPractice.classList.add('bg-white', 'shadow-sm', 'text-blue-600');
+                btnPractice.classList.remove('text-gray-600');
+                btnGuided.classList.add('text-gray-600');
+                btnGuided.classList.remove('bg-white', 'shadow-sm', 'text-blue-600');
+            }
+            
+            updateView();
+            speakCurrentInstruction();
+        }
+
+        // Voice settings toggling
+        function toggleVoice() {
+            isVoiceEnabled = !isVoiceEnabled;
+            const icon = document.getElementById('voiceIcon');
+            const text = document.getElementById('voiceText');
+            const btn = document.getElementById('btnVoiceToggle');
+
+            if (isVoiceEnabled) {
+                icon.className = "fa-solid fa-volume-high";
+                text.innerText = "Ήχος: ΝΑΙ";
+                btn.className = "bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1.5 rounded-lg text-xs md:text-sm font-bold flex items-center gap-1 transition";
+                speak("Ο ήχος ενεργοποιήθηκε!");
+            } else {
+                icon.className = "fa-solid fa-volume-xmark";
+                text.innerText = "Ήχος: ΟΧΙ";
+                btn.className = "bg-gray-100 hover:bg-gray-200 text-gray-500 px-3 py-1.5 rounded-lg text-xs md:text-sm font-bold flex items-center gap-1 transition";
+                window.speechSynthesis.cancel();
+            }
+        }
+
+        // Trigger Speech for the current state instruction
+        function speakCurrentInstruction() {
+            let text = "";
+            if (currentStep === 'welcome') {
+                text = stepInstructions['welcome'];
+            } else if (currentStep === 'pin-entry') {
+                text = stepInstructions['pin-entry'];
+            } else if (currentStep === 'main-menu') {
+                text = stepInstructions['main-menu'];
+            } else if (currentStep === 'withdrawal-amounts') {
+                text = stepInstructions['withdrawal-amounts'];
+            } else if (currentStep === 'processing') {
+                text = stepInstructions['processing'];
+            } else if (currentStep === 'take-assets') {
+                if (selectedActionType === 'withdrawal') {
+                    text = stepInstructions['take-assets-withdrawal'];
+                } else {
+                    text = stepInstructions['take-assets-balance'];
+                }
+            }
+            speak(text);
+        }
+
+        // Main screen visibility controller
+        function updateView() {
+            // Hide all states first
+            Object.values(states).forEach(stateId => {
+                document.getElementById(stateId).classList.add('hidden');
+            });
+
+            // Show active state
+            const activeStateId = states[currentStep];
+            if (activeStateId) {
+                document.getElementById(activeStateId).classList.remove('hidden');
+            }
+
+            // Update Progress Steps in Sidebar
+            updateSidebarSteps();
+
+            // Clear all interactive guidelines
+            clearHighlights();
+
+            // Apply Dynamic Guided Highlights for Autism support
+            if (isGuidedMode) {
+                applyGuidedHighlights();
+            }
+        }
+
+        // Update the visual step indicators on the left
+        function updateSidebarSteps() {
+            const step1 = document.getElementById('step1');
+            const step2 = document.getElementById('step2');
+            const step3 = document.getElementById('step3');
+            const step4 = document.getElementById('step4');
+            const step5 = document.getElementById('step5');
+
+            // Reset classes
+            [step1, step2, step3, step4, step5].forEach(el => {
+                el.className = "flex items-center gap-2 text-gray-300 font-semibold";
+                el.children[0].className = "fa-regular fa-circle";
+            });
+
+            if (currentStep === 'welcome') {
+                step1.className = "flex items-center gap-2 text-blue-600 font-bold";
+                step1.children[0].className = "fa-solid fa-circle-dot";
+            } else if (currentStep === 'pin-entry') {
+                step1.className = "flex items-center gap-2 text-green-600 font-bold";
+                step1.children[0].className = "fa-solid fa-circle-check";
+                step2.className = "flex items-center gap-2 text-blue-600 font-bold";
+                step2.children[0].className = "fa-solid fa-circle-dot";
+            } else if (currentStep === 'main-menu') {
+                step1.className = "flex items-center gap-2 text-green-600 font-bold";
+                step1.children[0].className = "fa-solid fa-circle-check";
+                step2.className = "flex items-center gap-2 text-green-600 font-bold";
+                step2.children[0].className = "fa-solid fa-circle-check";
+                step3.className = "flex items-center gap-2 text-blue-600 font-bold";
+                step3.children[0].className = "fa-solid fa-circle-dot";
+            } else if (currentStep === 'withdrawal-amounts') {
+                step1.className = "flex items-center gap-2 text-green-600 font-bold";
+                step1.children[0].className = "fa-solid fa-circle-check";
+                step2.className = "flex items-center gap-2 text-green-600 font-bold";
+                step2.children[0].className = "fa-solid fa-circle-check";
+                step3.className = "flex items-center gap-2 text-green-600 font-bold";
+                step3.children[0].className = "fa-solid fa-circle-check";
+                step4.className = "flex items-center gap-2 text-blue-600 font-bold";
+                step4.children[0].className = "fa-solid fa-circle-dot";
+            } else if (currentStep === 'processing' || currentStep === 'take-assets') {
+                step1.className = "flex items-center gap-2 text-green-600 font-bold";
+                step1.children[0].className = "fa-solid fa-circle-check";
+                step2.className = "flex items-center gap-2 text-green-600 font-bold";
+                step2.children[0].className = "fa-solid fa-circle-check";
+                step3.className = "flex items-center gap-2 text-green-600 font-bold";
+                step3.children[0].className = "fa-solid fa-circle-check";
+                step4.className = "flex items-center gap-2 text-green-600 font-bold";
+                step4.children[0].className = "fa-solid fa-circle-check";
+                step5.className = "flex items-center gap-2 text-blue-600 font-bold";
+                step5.children[0].className = "fa-solid fa-circle-dot";
+            }
+        }
+
+        // Clean all animated highlighters
+        function clearHighlights() {
+            // Remove highlighted borders/classes
+            document.getElementById('toyCard').classList.remove('guide-btn-highlight');
+            document.getElementById('cardSlot').className = "w-full h-5 bg-gray-950 rounded border-2 border-gray-700 relative flex justify-center items-center";
+            document.getElementById('btnWithdrawal').classList.remove('guide-btn-highlight');
+            document.getElementById('btnAmount50').classList.remove('guide-btn-highlight');
+            document.getElementById('physicalCash').classList.remove('guide-btn-highlight');
+            document.getElementById('physicalReceipt').classList.remove('guide-btn-highlight');
+            document.getElementById('cardPrompt').classList.add('hidden');
+        }
+
+        // Apply visual highlights based on current guided steps
+        function applyGuidedHighlights() {
+            if (currentStep === 'welcome') {
+                document.getElementById('toyCard').classList.add('guide-btn-highlight');
+                document.getElementById('cardSlot').className = "w-full h-5 bg-gray-950 rounded border-2 border-blue-500 slot-active relative flex justify-center items-center";
+                document.getElementById('cardPrompt').classList.remove('hidden');
+            } else if (currentStep === 'main-menu') {
+                document.getElementById('btnWithdrawal').classList.add('guide-btn-highlight');
+            } else if (currentStep === 'withdrawal-amounts') {
+                document.getElementById('btnAmount50').classList.add('guide-btn-highlight');
+            } else if (currentStep === 'take-assets') {
+                if (selectedActionType === 'withdrawal' && !userHasCash) {
+                    document.getElementById('physicalCash').classList.add('guide-btn-highlight');
+                } else if (selectedActionType === 'balance' && !userHasReceipt) {
+                    document.getElementById('physicalReceipt').classList.add('guide-btn-highlight');
+                }
+            }
+        }
+
+        // 1. Action: Insert Card
+        function insertCard() {
+            if (isCardInserted) return;
+            
+            isCardInserted = true;
+            document.getElementById('toyCard').classList.add('hidden');
+            document.getElementById('cardInsertedVisual').classList.remove('hidden');
+            document.getElementById('cardSlot').className = "w-full h-5 bg-gray-950 rounded border-2 border-gray-700 relative flex justify-center items-center";
+            
+            // Advance to PIN entry
+            currentStep = 'pin-entry';
+            enteredPin = "";
+            updatePinDots();
+            updateView();
+            speakCurrentInstruction();
+            
+            // Helper text update
+            document.getElementById('helperInstructions').innerHTML = "Φανταστικά! Η κάρτα σου μπήκε. <br>Τώρα πληκτρολόγησε το μυστικό σου PIN: <strong>1 2 3 4</strong> και μετά πάτησε το πράσινο κουμπί <strong>ΑΠΟΔΟΧΗ</strong>.";
+        }
+
+        // Keypad inputs
+        function pressKey(num) {
+            if (currentStep !== 'pin-entry') return;
+
+            if (enteredPin.length < 4) {
+                enteredPin += num;
+                updatePinDots();
+                // Play simple feedback click sound (can be synthesized or bypassed)
+                if (isVoiceEnabled) {
+                    // Small speech synth sound as auditory typing cue
+                    const synth = window.speechSynthesis;
+                    const u = new SpeechSynthesisUtterance(num);
+                    u.lang = 'el-GR';
+                    u.rate = 1.5;
+                    synth.speak(u);
+                }
+            }
+        }
+
+        function clearPin() {
+            if (currentStep !== 'pin-entry') return;
+            enteredPin = "";
+            updatePinDots();
+            document.getElementById('pinFeedback').innerText = "";
+        }
+
+        function updatePinDots() {
+            for (let i = 1; i <= 4; i++) {
+                const dot = document.getElementById(`pinDot${i}`);
+                if (enteredPin.length >= i) {
+                    dot.innerText = "*";
+                    dot.className = "w-10 h-10 rounded-xl border-2 border-yellow-400 flex items-center justify-center text-3xl font-bold bg-sky-950 text-yellow-400";
+                } else {
+                    dot.innerText = "-";
+                    dot.className = "w-10 h-10 rounded-xl border-2 border-sky-400 flex items-center justify-center text-2xl font-bold bg-sky-950 text-sky-400";
+                }
+            }
+        }
+
+        // Submit PIN and check
+        function submitPin() {
+            if (currentStep !== 'pin-entry') return;
+
+            if (enteredPin === correctPin) {
+                document.getElementById('pinFeedback').innerText = "";
+                currentStep = 'processing';
+                document.getElementById('processingText').innerText = "ΕΠΑΛΗΘΕΥΣΗ PIN...";
+                updateView();
+                
+                setTimeout(() => {
+                    currentStep = 'main-menu';
+                    updateView();
+                    speakCurrentInstruction();
+                    document.getElementById('helperInstructions').innerHTML = "Το PIN σου είναι σωστό! Μπράβο!<br>Τώρα πάτα την επιλογή <strong>ΑΝΑΛΗΨΗ ΧΡΗΜΑΤΩΝ</strong> στην οθόνη.";
+                }, 1500);
+            } else {
+                // Incorrect pin feedback for special education/autism (no threat/soft alert)
+                document.getElementById('pinFeedback').innerText = "Το PIN δεν είναι σωστό. Δοκίμασε πάλι: 1 2 3 4";
+                speak(stepInstructions['pin-error']);
+                enteredPin = "";
+                updatePinDots();
+            }
+        }
+
+        // Selection of primary action
+        function selectAction(action) {
+            selectedActionType = action;
+            if (action === 'withdrawal') {
+                currentStep = 'withdrawal-amounts';
+                updateView();
+                speakCurrentInstruction();
+                document.getElementById('helperInstructions').innerHTML = "Τέλεια! Διάλεξε πόσα χρήματα θες να πάρεις.<br>Ας πάρουμε <strong>50 Ευρώ</strong> πατώντας το αντίστοιχο κουμπί!";
+            } else if (action === 'balance') {
+                currentStep = 'processing';
+                document.getElementById('processingText').innerText = "ΑΝΑΚΤΗΣΗ ΥΠΟΛΟΙΠΟΥ...";
+                updateView();
+                setTimeout(() => {
+                    currentStep = 'balance';
+                    updateView();
+                    speak("Το υπόλοιπο του λογαριασμού σου είναι 340 ευρώ και 50 λεπτά. Πάτα ΤΕΛΟΣ ΚΑΙ ΕΞΟΔΟΣ για να πάρεις την κάρτα σου.");
+                    document.getElementById('helperInstructions').innerHTML = "Βλέπεις πόσα χρήματα έχεις στο λογαριασμό σου!<br>Για να τελειώσεις, πάτα το κουμπί <strong>ΤΕΛΟΣ & ΕΞΟΔΟΣ</strong>.";
+                }, 1500);
+            }
+        }
+
+        // Go back to main menu from submenus
+        function goBackToMainMenu() {
+            currentStep = 'main-menu';
+            updateView();
+            speakCurrentInstruction();
+        }
+
+        // Select withdrawal cash amount
+        function selectAmount(amount) {
+            currentStep = 'processing';
+            document.getElementById('processingText').innerText = "ΠΑΡΑΚΑΛΩ ΠΕΡΙΜΕΝΕΤΕ... ΓΙΝΕΤΑΙ ΜΕΤΡΗΣΗ ΧΡΗΜΑΤΩΝ...";
+            updateView();
+            speak(stepInstructions['processing']);
+
+            setTimeout(() => {
+                currentStep = 'take-assets';
+                userHasCash = false;
+                userHasReceipt = false;
+                
+                // Show physical money sticking out
+                document.getElementById('physicalCash').classList.remove('hidden');
+                
+                updateView();
+                speakCurrentInstruction();
+                document.getElementById('helperInstructions').innerHTML = "Τα κατάφερες! Τα χρήματά σου βγήκαν στη σχισμή!<br>Κάνε κλικ στα <strong>Χαρτονομίσματα</strong> κάτω αριστερά για να τα πάρεις.";
+            }, 3000);
+        }
+
+        // Take Physical Cash Interaction
+        function takeCash() {
+            if (userHasCash) return;
+            userHasCash = true;
+            document.getElementById('physicalCash').classList.add('hidden');
+            
+            // Visual trigger to return the card
+            document.getElementById('cardInsertedVisual').classList.add('hidden');
+            document.getElementById('toyCard').classList.remove('hidden');
+            document.getElementById('toyCard').classList.add('guide-btn-highlight');
+            
+            document.getElementById('takeAssetsTitle').innerText = "ΠΑΡΑΚΑΛΩ ΠΑΡΕΤΕ ΤΗΝ ΚΑΡΤΑ ΣΑΣ";
+            document.getElementById('takeAssetsSubtitle').innerText = "Κάντε κλικ στην κάρτα σας για να την αποθηκεύσετε στο πορτοφόλι.";
+            
+            speak("Πολύ καλά! Τώρα πάρε την κάρτα σου από τη σχισμή κάνοντας κλικ πάνω της.");
+            document.getElementById('helperInstructions').innerHTML = "Πήρες τα χρήματα! <br>Τώρα κάνε κλικ στην <strong>Κάρτα σου</strong> για να την πάρεις πίσω στο πορτοφόλι σου.";
+            
+            // Adjust event listener so card removal completes simulation
+            document.getElementById('toyCard').setAttribute('onclick', 'retrieveCardAndFinish()');
+        }
+
+        // Cancel / Exit Transaction Flow
+        function cancelTransaction() {
+            if (!isCardInserted) return;
+            
+            currentStep = 'processing';
+            document.getElementById('processingText').innerText = "ΑΚΥΡΩΣΗ ΣΥΝΑΛΛΑΓΗΣ... ΕΞΟΔΟΣ ΚΑΡΤΑΣ...";
+            updateView();
+            speak("Η συναλλαγή ακυρώθηκε. Παρακαλώ πάρτε την κάρτα σας.");
+
+            setTimeout(() => {
+                currentStep = 'welcome';
+                isCardInserted = false;
+                document.getElementById('cardInsertedVisual').classList.add('hidden');
+                document.getElementById('toyCard').classList.remove('hidden');
+                document.getElementById('toyCard').classList.add('guide-btn-highlight');
+                document.getElementById('toyCard').setAttribute('onclick', 'retrieveCardAndFinish()');
+                updateView();
+                document.getElementById('helperInstructions').innerHTML = "Η συναλλαγή ακυρώθηκε. <br>Κάνε κλικ στην <strong>Κάρτα σου</strong> για να την πάρεις πίσω.";
+            }, 1500);
+        }
+
+        // Print & retrieve receipt actions
+        function takeReceipt() {
+            if (userHasReceipt) return;
+            userHasReceipt = true;
+            document.getElementById('physicalReceipt').classList.add('hidden');
+            
+            // Visual trigger to return the card
+            document.getElementById('cardInsertedVisual').classList.add('hidden');
+            document.getElementById('toyCard').classList.remove('hidden');
+            document.getElementById('toyCard').classList.add('guide-btn-highlight');
+            
+            document.getElementById('takeAssetsTitle').innerText = "ΠΑΡΑΚΑΛΩ ΠΑΡΕΤΕ ΤΗΝ ΚΑΡΤΑ ΣΑΣ";
+            document.getElementById('takeAssetsSubtitle').innerText = "Κάντε κλικ στην κάρτα σας για να την αποθηκεύσετε στο πορτοφόλι.";
+            
+            speak("Πήρες την απόδειξη! Τώρα πάρε την κάρτα σου από τη σχισμή κάνοντας κλικ πάνω της.");
+            document.getElementById('helperInstructions').innerHTML = "Πήρες την απόδειξη! <br>Τώρα κάνε κλικ στην <strong>Κάρτα σου</strong> για να την πάρεις πίσω στο πορτοφόλι σου.";
+            
+            document.getElementById('toyCard').setAttribute('onclick', 'retrieveCardAndFinish()');
+        }
+
+        // Final card retrieval and success celebration trigger
+        function retrieveCardAndFinish() {
+            isCardInserted = false;
+            document.getElementById('toyCard').classList.remove('guide-btn-highlight');
+            document.getElementById('toyCard').setAttribute('onclick', 'insertCard()'); // reset default handler
+            
+            // Sound feedback
+            speak("Μπράβο! Πήρες την κάρτα σου με ασφάλεια. Συγχαρητήρια, ολοκλήρωσες τη δοκιμή!");
+            
+            // Show celebration modal
+            const modal = document.getElementById('modalSuccess');
+            modal.classList.remove('hidden');
+        }
+
+        // Restart simulation helper
+        function restartAfterSuccess() {
+            const modal = document.getElementById('modalSuccess');
+            modal.classList.add('hidden');
+            resetSimulation();
+        }
+
+        // Total reset to initial state
+        function resetSimulation() {
+            currentStep = 'welcome';
+            isCardInserted = false;
+            enteredPin = "";
+            selectedActionType = "";
+            userHasCash = false;
+            userHasReceipt = false;
+            
+            document.getElementById('toyCard').classList.remove('hidden');
+            document.getElementById('toyCard').setAttribute('onclick', 'insertCard()');
+            document.getElementById('cardInsertedVisual').classList.add('hidden');
+            document.getElementById('physicalCash').classList.add('hidden');
+            document.getElementById('physicalReceipt').classList.add('hidden');
+            
+            document.getElementById('helperInstructions').innerHTML = "Γεια σου! Ας μάθουμε μαζί πώς να χρησιμοποιούμε το ATM της Eurobank. <br>Για να ξεκινήσεις, <strong>κάνε κλικ στην κάρτα σου</strong> για να τη βάλεις στην πράσινη σχισμή!";
+            
+            updateView();
+            speakCurrentInstruction();
+        }
+    </script>
+</body>
+</html>
